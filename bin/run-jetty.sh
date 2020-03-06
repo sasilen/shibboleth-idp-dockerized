@@ -2,7 +2,7 @@
 
 #set -x
 
-export JAVA_HOME=/opt/jre-home
+export JAVA_HOME=/usr/lib/jvm/default-jvm \
 export PATH=$PATH:$JAVA_HOME/bin
 
 if [ -e "/opt/shibboleth-idp/ext-conf/idp-secrets.properties" ]; then
@@ -11,6 +11,6 @@ if [ -e "/opt/shibboleth-idp/ext-conf/idp-secrets.properties" ]; then
 fi
 
 export JETTY_ARGS="jetty.sslContext.keyStorePassword=$JETTY_BROWSER_SSL_KEYSTORE_PASSWORD jetty.backchannel.sslContext.keyStorePassword=$JETTY_BACKCHANNEL_SSL_KEYSTORE_PASSWORD"
-sed -i "s/^-Xmx.*$/-Xmx$JETTY_MAX_HEAP/g" /opt/shib-jetty-base/start.ini
+sed -i "s/^-Xmx.*$/-Xmx$JETTY_MAX_HEAP/g" /opt/jetty-base/start.ini
 
 exec /opt/jetty-home/bin/jetty.sh run

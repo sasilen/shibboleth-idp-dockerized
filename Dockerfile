@@ -1,120 +1,128 @@
-FROM centos:centos7 as temp
+FROM alpine:latest as temp
 
-ENV java_version=8.0.212 \
-    zulu_version=8.38.0.13 \
-    java_hash=14136019014c020fee0fc13073d00388 \
-    jetty_version=9.3.27.v20190418 \
-    jetty_hash=7c7c80dd1c9f921771e2b1a05deeeec652d5fcaa \
-    idp_version=3.4.3 \
-    idp_hash=eb86bc7b6366ce2a44f97cae1b014d307b84257e3149469b22b2d091007309db \
-    dta_hash=2f547074b06952b94c35631398f36746820a7697 \
-    slf4j_version=1.7.25 \
-    slf4j_hash=da76ca59f6a57ee3102f8f9bd9cee742973efa8a \
+ENV jetty_version=9.4.26.v20200117 \
+    jetty_hash=31a157c493687e9b7be7366a5dc4ee7ef9cae1663ea279cd9fcf4070d53ef071 \
+    idp_version=4.0.0-beta2 \
+    idp_hash=a2ecbacc2858fb5eeacba1a8918baf2124f92f83e7c42f3200a0ab14fdd5f439 \
+    slf4j_version=1.7.29 \
+    slf4j_hash=47b624903c712f9118330ad2fb91d0780f7f666c3f22919d0fc14522c5cad9ea \
     logback_version=1.2.3 \
-    logback_classic_hash=7c4f3c474fb2c041d8028740440937705ebb473a \
-    logback_core_hash=864344400c3d4d92dfeb0a305dc87d953677c03c \
-    logback_access_hash=e8a841cb796f6423c7afd8738df6e0e4052bf24a
+    logback_classic_hash=fb53f8539e7fcb8f093a56e138112056ec1dc809ebb020b59d8a36a5ebac37e0 \
+    logback_core_hash=5946d837fe6f960c02a53eda7a6926ecc3c758bbdd69aa453ee429f858217f22 \
+    logback_access_hash=0a4fc8753abe266ea7245e6d9653d6275dc1137cad6ecd1b2612204033d89687 \
+    mariadb_version=2.5.4 \
+    mariadb_hash=5fafee1aad82be39143b4bfb8915d6c2d73d860938e667db8371183ff3c8500a
 
 ENV JETTY_HOME=/opt/jetty-home \
-    JETTY_BASE=/opt/shib-jetty-base \
+    JETTY_BASE=/opt/jetty-base \
+    JETTY_KEYSTORE_PASSWORD=changeme \
+    IDP_HOME=/opt/shibboleth-idp \
+    JAVA_HOME=/usr/lib/jvm/default-jvm \
+    IDP_SRC=/opt/shibboleth-identity-provider-$idp_version \
+    IDP_SCOPE=example.fi \
+    IDP_HOST_NAME=testidp.example.fi \
+    IDP_ENTITYID=https://testidp.example.fi/idp/shibboleth \
+    IDP_KEYSTORE_PASSWORD=changeme \
+    IDP_SEALER_PASSWORD=changeme \
     PATH=$PATH:$JRE_HOME/bin
 
-RUN yum -y update \
-    && yum -y install wget tar which \
-    && yum -y clean all
+LABEL maintainer="CSCfi"\
+      idp.java.version="Alpine - java-11-openjdk-headless" \
+      idp.jetty.version=$jetty_version \
+      idp.version=$idp_version
 
-# Download Java, verify the hash, and install
-RUN wget -q http://cdn.azul.com/zulu/bin/zulu$zulu_version-ca-jdk$java_version-linux_x64.tar.gz \
-    && echo "$java_hash  zulu$zulu_version-ca-jdk$java_version-linux_x64.tar.gz" | md5sum -c - \
-    && tar -zxvf zulu$zulu_version-ca-jdk$java_version-linux_x64.tar.gz -C /opt \
-    && ln -s /opt/zulu$zulu_version-ca-jdk$java_version-linux_x64/jre/ /opt/jre-home
+RUN apk --no-cache add wget tar openjdk11-jre-headless bash
 
-# Download Jetty, verify the hash, and install, initialize a new base
-RUN wget -q http://central.maven.org/maven2/org/eclipse/jetty/jetty-distribution/$jetty_version/jetty-distribution-$jetty_version.tar.gz \
-    && echo "$jetty_hash  jetty-distribution-$jetty_version.tar.gz" | sha1sum -c - \
+# JETTY - Download, verify and install with base
+RUN wget -q https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/$jetty_version/jetty-distribution-$jetty_version.tar.gz \
+    && echo "$jetty_hash  jetty-distribution-$jetty_version.tar.gz" | sha256sum -c - \
     && tar -zxvf jetty-distribution-$jetty_version.tar.gz -C /opt \
-    && ln -s /opt/jetty-distribution-$jetty_version/ /opt/jetty-home
+    && ln -s /opt/jetty-distribution-$jetty_version/ /opt/jetty-home \
+    && rm jetty-distribution-$jetty_version.tar.gz
 
-# Config Jetty
-RUN mkdir -p /opt/shib-jetty-base/modules /opt/shib-jetty-base/lib/ext  /opt/shib-jetty-base/lib/logging /opt/shib-jetty-base/resources \
-    && cd /opt/shib-jetty-base \
+# JETTY Configure
+RUN mkdir -p $JETTY_BASE/modules $JETTY_BASE/lib/ext $JETTY_BASE/lib/logging $JETTY_BASE/resources \
+    && cd $JETTY_BASE \
     && touch start.ini \
-    && /opt/jre-home/bin/java -jar ../jetty-home/start.jar --add-to-startd=http,https,deploy,ext,annotations,jstl,rewrite
+    && $JAVA_HOME/bin/java -jar ../jetty-home/start.jar --create-startd --add-to-start=http,https,deploy,ext,annotations,jstl,rewrite,ssl,setuid
 
-# Download Shibboleth IdP, verify the hash, and install
+# Shibboleth IdP - Download, verify hash and install
 RUN wget -q https://shibboleth.net/downloads/identity-provider/$idp_version/shibboleth-identity-provider-$idp_version.tar.gz \
     && echo "$idp_hash  shibboleth-identity-provider-$idp_version.tar.gz" | sha256sum -c - \
     && tar -zxvf  shibboleth-identity-provider-$idp_version.tar.gz -C /opt \
-    && ln -s /opt/shibboleth-identity-provider-$idp_version/ /opt/shibboleth-idp
+    && $IDP_SRC/bin/install.sh \
+    -Didp.scope=$IDP_SCOPE \
+    -Didp.target.dir=$IDP_HOME \
+    -Didp.src.dir=$IDP_SRC \
+    -Didp.scope=$IDP_SCOPE \
+    -Didp.host.name=$IDP_HOST_NAME \
+    -Didp.noprompt=true \
+    -Didp.sealer.password=$IDP_SEALER_PASSWORD \
+    -Didp.keystore.password=$IDP_KEYSTORE_PASSWORD \
+    -Didp.entityID=$IDP_ENTITYID \
+    && rm shibboleth-identity-provider-$idp_version.tar.gz
 
-# Download the library to allow SOAP Endpoints, verify the hash, and place
-RUN wget -q https://build.shibboleth.net/nexus/content/repositories/releases/net/shibboleth/utilities/jetty9/jetty9-dta-ssl/1.0.0/jetty9-dta-ssl-1.0.0.jar \
-    && echo "$dta_hash  jetty9-dta-ssl-1.0.0.jar" | sha1sum -c - \
-    && mv jetty9-dta-ssl-1.0.0.jar /opt/shib-jetty-base/lib/ext/
+# slf4j - Download, verify and install
+RUN wget -q https://repo1.maven.org/maven2/org/slf4j/slf4j-api/$slf4j_version/slf4j-api-$slf4j_version.jar \
+    && echo "$slf4j_hash  slf4j-api-$slf4j_version.jar" | sha256sum -c - \
+    && mv slf4j-api-$slf4j_version.jar $JETTY_BASE/lib/logging/
 
-# Download the slf4j library for Jetty logging, verify the hash, and place
-RUN wget -q http://central.maven.org/maven2/org/slf4j/slf4j-api/$slf4j_version/slf4j-api-$slf4j_version.jar \
-    && echo "$slf4j_hash  slf4j-api-$slf4j_version.jar" | sha1sum -c - \
-    && mv slf4j-api-$slf4j_version.jar /opt/shib-jetty-base/lib/logging/
+# logback_classic - Download verify and install
+RUN wget -q https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/$logback_version/logback-classic-$logback_version.jar \
+    && echo "$logback_classic_hash  logback-classic-$logback_version.jar" | sha256sum -c - \
+    && mv logback-classic-$logback_version.jar $JETTY_BASE/lib/logging/
 
-# Download the logback_classic library for Jetty logging, verify the hash, and place
-RUN wget -q http://central.maven.org/maven2/ch/qos/logback/logback-classic/$logback_version/logback-classic-$logback_version.jar \
-    && echo "$logback_classic_hash  logback-classic-$logback_version.jar" | sha1sum -c - \
-    && mv logback-classic-$logback_version.jar /opt/shib-jetty-base/lib/logging/
+# logback-core - Download, verify and install
+RUN wget -q https://repo1.maven.org/maven2/ch/qos/logback/logback-core/$logback_version/logback-core-$logback_version.jar \
+    && echo "$logback_core_hash  logback-core-$logback_version.jar" | sha256sum -c - \
+    && mv logback-core-$logback_version.jar $JETTY_BASE/lib/logging/
 
-# Download the logback-core library for Jetty logging, verify the hash, and place
-RUN wget -q http://central.maven.org/maven2/ch/qos/logback/logback-core/$logback_version/logback-core-$logback_version.jar \
-    && echo "$logback_core_hash logback-core-$logback_version.jar" | sha1sum -c - \
-    && mv logback-core-$logback_version.jar /opt/shib-jetty-base/lib/logging/
+# logback-access - Download, verify and install
+RUN wget -q https://repo1.maven.org/maven2/ch/qos/logback/logback-access/$logback_version/logback-access-$logback_version.jar \
+    && echo "$logback_access_hash  logback-access-$logback_version.jar" | sha256sum -c - \
+    && mv logback-access-$logback_version.jar $JETTY_BASE/lib/logging/
 
-# Download the logback-access library for Jetty logging, verify the hash, and place
-RUN wget -q http://central.maven.org/maven2/ch/qos/logback/logback-access/$logback_version/logback-access-$logback_version.jar \
-    && echo "$logback_access_hash logback-access-$logback_version.jar" | sha1sum -c - \
-    && mv logback-access-$logback_version.jar /opt/shib-jetty-base/lib/logging/
+# mariadb-java-client - Donwload, verify and install
+RUN wget -q https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$mariadb_version/mariadb-java-client-$mariadb_version.jar \
+    && echo "$mariadb_hash  mariadb-java-client-$mariadb_version.jar" | sha256sum -c - \
+    && mv mariadb-java-client-$mariadb_version.jar $IDP_HOME/edit-webapp/WEB-INF/lib/
 
-# Setting owner ownership and permissions on new items in this command
-RUN useradd jetty -U -s /bin/false \
-    && chown -R root:jetty /opt \
-    && chmod -R 640 /opt \
-    && chmod 750 /opt/jre-home/bin/java
-
-COPY opt/shib-jetty-base/ /opt/shib-jetty-base/
+COPY opt/jetty-base/ /opt/jetty-base/
 COPY opt/shibboleth-idp/ /opt/shibboleth-idp/
 
-# Setting owner ownership and permissions on new items from the COPY command
-RUN mkdir /opt/shib-jetty-base/logs \
-    && chown -R root:jetty /opt/shib-jetty-base \
-    && chmod -R 640 /opt/shib-jetty-base \
-    && chmod -R 750 /opt/shibboleth-idp/bin
-    
-FROM centos:centos7
+# Create new user to run jetty with
+RUN addgroup -g 1000 -S jetty && \
+    adduser -u 1000 -S jetty -G jetty -s /bin/false
 
-LABEL maintainer="Unicon, Inc."\
-      idp.java.version="8.0.212" \
-      idp.jetty.version="9.3.27.v20190418" \
-      idp.version="3.4.3"
+# Set ownerships
+RUN mkdir $JETTY_BASE/logs \
+    && chown -R root:jetty $JETTY_BASE \
+    && chmod -R 550 $JETTY_BASE \
+    && chmod -R 550 /opt/shibboleth-idp/bin \
+    && chown -R root:jetty /opt \
+    && chmod -R 550 /opt
 
-ENV JETTY_HOME=/opt/jetty-home \
-    JETTY_BASE=/opt/shib-jetty-base \
-    JETTY_MAX_HEAP=2048m \
-    JETTY_BROWSER_SSL_KEYSTORE_PASSWORD=changeme \
-    JETTY_BACKCHANNEL_SSL_KEYSTORE_PASSWORD=changeme \
-    PATH=$PATH:$JRE_HOME/bin
+FROM alpine:latest
 
-RUN yum -y update \
-    && yum -y install which \
-    && yum -y clean all
+RUN apk --no-cache add wget tar openjdk11-jre-headless bash
+
+LABEL maintainer="CSCfi"\
+    idp.java.version="Alpine - java-11-openjdk-headless" \
+    idp.jetty.version=$jetty_version \
+    idp.version=$idp_version
 
 COPY bin/ /usr/local/bin/
 
-RUN useradd jetty -U -s /bin/false \
+RUN addgroup -g 1000 -S jetty \
+    && adduser -u 1000 -S jetty -G jetty -s /bin/false \
     && chmod 750 /usr/local/bin/run-jetty.sh /usr/local/bin/init-idp.sh
 
 COPY --from=temp /opt/ /opt/
 
 RUN chmod +x /opt/jetty-home/bin/jetty.sh
 
-# Opening 4443 (browser TLS), 8443 (mutual auth TLS)
-EXPOSE 4443 8443
+# Opening 443
+EXPOSE 443
 
-CMD ["run-jetty.sh"]
+#CMD ["run-jetty.sh"]
+CMD ["/usr/lib/jvm/default-jvm/bin/java","-jar","/opt/jetty-home/start.jar","jetty.home=/opt/jetty-home","jetty.base=/opt/jetty-base"]
