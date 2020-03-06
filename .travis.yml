@@ -1,0 +1,13 @@
+sudo: required
+
+services:
+  - docker
+
+before_script:
+  - docker-compose up -d --build idp
+
+script:
+  - docker-compose exec -ti idp ip addr show 
+
+after_script:
+  - docker-compose down
