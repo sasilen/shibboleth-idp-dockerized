@@ -22,8 +22,8 @@ ENV JETTY_HOME=/opt/jetty-home \
     IDP_SCOPE=example.fi \
     IDP_HOST_NAME=testidp.example.fi \
     IDP_ENTITYID=https://testidp.example.fi/idp/shibboleth \
-    IDP_KEYSTORE_PASSWORD=changeme \
-    IDP_SEALER_PASSWORD=changeme \
+    IDP_KEYSTORE_PASSWORD=storepwd \
+    IDP_SEALER_PASSWORD=hangeme \
     PATH=$PATH:$JRE_HOME/bin
 
 LABEL maintainer="CSCfi"\
@@ -123,6 +123,20 @@ RUN chmod +x /opt/jetty-home/bin/jetty.sh
 
 # Opening 443
 EXPOSE 443
+ENV JETTY_HOME=/opt/jetty-home \
+    JETTY_BASE=/opt/jetty-base \
+    JETTY_KEYSTORE_PASSWORD=changeme \
+    IDP_HOME=/opt/shibboleth-idp \
+    JAVA_HOME=/usr/lib/jvm/default-jvm \
+    IDP_SRC=/opt/shibboleth-identity-provider-$idp_version \
+    IDP_SCOPE=example.fi \
+    IDP_HOST_NAME=testidp.example.fi \
+    IDP_ENTITYID=https://testidp.example.fi/idp/shibboleth \
+    IDP_KEYSTORE_PASSWORD=changeme \
+    IDP_SEALER_PASSWORD=storepwd \
+    PATH=$PATH:$JRE_HOME/bin
 
 #CMD ["run-jetty.sh"]
-CMD ["/usr/lib/jvm/default-jvm/bin/java","-jar","/opt/jetty-home/start.jar","jetty.home=/opt/jetty-home","jetty.base=/opt/jetty-base"]
+CMD $JAVA_HOME/bin/java -jar $JETTY_HOME/start.jar jetty.home=$JETTY_HOME jetty.base=$JETTY_BASE -Djetty.sslContext.keyStorePassword=$IDP_KEYSTORE_PASSWORD
+#CMD ["/usr/lib/jvm/default-jvm/bin/java","-jar","/opt/jetty-home/start.jar","jetty.home=/opt/jetty-home","jetty.base=/opt/jetty-base"]
+
