@@ -1,9 +1,9 @@
 FROM alpine:latest as temp
 
-ENV jetty_version=9.4.26.v20200117 \
-    jetty_hash=31a157c493687e9b7be7366a5dc4ee7ef9cae1663ea279cd9fcf4070d53ef071 \
-    idp_version=4.0.0-beta2 \
-    idp_hash=a2ecbacc2858fb5eeacba1a8918baf2124f92f83e7c42f3200a0ab14fdd5f439 \
+ENV jetty_version=9.4.27.v20200227 \
+    jetty_hash=b47b0990493196acdb82325e355019485f96ee12f9bf3d4f47a9ac748ab3d56a \
+    idp_version=4.0.0 \
+    idp_hash=a9c2fb351b2e49313f2f185bc98d944544a38f42b9722dc96bda7427a29ea2bb \
     slf4j_version=1.7.29 \
     slf4j_hash=47b624903c712f9118330ad2fb91d0780f7f666c3f22919d0fc14522c5cad9ea \
     logback_version=1.2.3 \
@@ -27,7 +27,7 @@ ENV JETTY_HOME=/opt/jetty-home \
     PATH=$PATH:$JRE_HOME/bin
 
 LABEL maintainer="CSCfi"\
-      idp.java.version="Alpine - java-11-openjdk-headless" \
+      idp.java.version="Alpine - openjdk11-jre-headless" \
       idp.jetty.version=$jetty_version \
       idp.version=$idp_version
 
@@ -107,7 +107,7 @@ FROM alpine:latest
 RUN apk --no-cache add wget tar openjdk11-jre-headless bash
 
 LABEL maintainer="CSCfi"\
-    idp.java.version="Alpine - java-11-openjdk-headless" \
+    idp.java.version="Alpine - openjdk11-jre-headless" \
     idp.jetty.version=$jetty_version \
     idp.version=$idp_version
 
