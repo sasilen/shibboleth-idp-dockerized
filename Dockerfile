@@ -104,7 +104,7 @@ RUN mkdir $JETTY_BASE/logs \
 
 FROM alpine:latest
 
-RUN apk --no-cache add wget tar openjdk11-jre-headless bash
+RUN apk --no-cache add openjdk11-jre-headless bash
 
 LABEL maintainer="CSCfi"\
     idp.java.version="Alpine - openjdk11-jre-headless" \
