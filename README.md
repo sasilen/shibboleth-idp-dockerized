@@ -1,6 +1,6 @@
 ## Overview
 
-This Docker image contains a deployed Shibboleth IdP 4.0.2-beta running on OpenJDK11-headless and Jetty 9.4.26.v20200117 running on the latest Alpine base. This image is a base image and should be used to set the configuration with local changes.
+This Docker image contains a deployed Shibboleth IdP 4.0.2 running on OpenJDK11-headless and Jetty 9.4.26.v20200117 running on the latest Alpine base. This image is a base image and should be used to set the configuration with local changes.
 
 Every component (Java, Jetty, Shibboleth IdP, and extensions) in this image is verified using cryptographic hashes obtained from each vendor and stored in the `Dockerfile` directly. This makes the build essentially deterministic.
 

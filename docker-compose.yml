@@ -23,7 +23,7 @@ services:
     image: bersace/openldap
     restart: unless-stopped
     environment:
-      - LDAP_DOMAIN=example.fi
+      - LDAP_DOMAIN=${LDAP_DOMAIN}
       - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
     networks:
       - backend

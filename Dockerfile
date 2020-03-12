@@ -15,7 +15,7 @@ ENV jetty_version=9.4.27.v20200227 \
 
 ENV JETTY_HOME=/opt/jetty-home \
     JETTY_BASE=/opt/jetty-base \
-    JETTY_KEYSTORE_PASSWORD=changeme \
+    JETTY_KEYSTORE_PASSWORD=storepwd \
     IDP_HOME=/opt/shibboleth-idp \
     JAVA_HOME=/usr/lib/jvm/default-jvm \
     IDP_SRC=/opt/shibboleth-identity-provider-$idp_version \
@@ -125,18 +125,14 @@ RUN chmod +x /opt/jetty-home/bin/jetty.sh
 EXPOSE 443
 ENV JETTY_HOME=/opt/jetty-home \
     JETTY_BASE=/opt/jetty-base \
-    JETTY_KEYSTORE_PASSWORD=changeme \
-    IDP_HOME=/opt/shibboleth-idp \
+    JETTY_KEYSTORE_PASSWORD=storepwd \
+    JETTY_KEYSTORE_PATH=etc/keystore \
     JAVA_HOME=/usr/lib/jvm/default-jvm \
-    IDP_SRC=/opt/shibboleth-identity-provider-$idp_version \
-    IDP_SCOPE=example.fi \
-    IDP_HOST_NAME=testidp.example.fi \
-    IDP_ENTITYID=https://testidp.example.fi/idp/shibboleth \
-    IDP_KEYSTORE_PASSWORD=changeme \
-    IDP_SEALER_PASSWORD=storepwd \
     PATH=$PATH:$JRE_HOME/bin
 
 #CMD ["run-jetty.sh"]
-CMD $JAVA_HOME/bin/java -jar $JETTY_HOME/start.jar jetty.home=$JETTY_HOME jetty.base=$JETTY_BASE -Djetty.sslContext.keyStorePassword=$IDP_KEYSTORE_PASSWORD
-#CMD ["/usr/lib/jvm/default-jvm/bin/java","-jar","/opt/jetty-home/start.jar","jetty.home=/opt/jetty-home","jetty.base=/opt/jetty-base"]
+CMD $JAVA_HOME/bin/java -jar $JETTY_HOME/start.jar \
+    jetty.home=$JETTY_HOME jetty.base=$JETTY_BASE \
+    -Djetty.sslContext.keyStorePassword=$JETTY_KEYSTORE_PASSWORD \
+    -Djetty.sslContext.keyStorePath=$JETTY_KEYSTORE_PATH
 
